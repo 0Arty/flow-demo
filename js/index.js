@@ -751,6 +751,16 @@ APP.formValidate = () => {
     $form.find('input[data-input-type="phone"]').attr("name", "phone");
 }
 
+APP.smoothScroll = () => {
+    $('.header__container .logo__containe, .footer__grid .col__logo .link-to-main-site').on('click', function(e){
+        e.preventDefault();
+
+        $('html, body').animate({
+            scrollTop: $('#hero').offset().top
+        }, 800); // 800 — час анімації в мс (можеш змінити)
+    });
+}
+
 $document.ready(function () {
     APP.gsapRegisterPlugins()
     APP.inputMasks()
@@ -765,4 +775,5 @@ $document.ready(function () {
     APP.createTermsPopUp()
     APP.createFormPopUp()
     APP.formValidate()
+    APP.smoothScroll()
 })
