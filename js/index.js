@@ -502,12 +502,36 @@ APP.accordions = () => {
 
 APP.splitChars = () => {
 
+
     const headerHeight = $("header").innerHeight();
     const minOffset = headerHeight + 16;
     const aboutContainerHeight = $(".about__container").innerHeight();
     const availableSpace = window.innerHeight - minOffset;
     const shouldPin = aboutContainerHeight <= availableSpace;
-    const speedMultiplier = window.innerWidth < 768 ? 10 : 20;
+    const speedMultiplier = window.innerWidth < 768 ? 10 : 10;
+    const centerOffset = (window.innerHeight - aboutContainerHeight) / 2;
+    const finalOffset = Math.max(centerOffset, minOffset);
+
+    const timings = [
+        [0.05, 0.15],
+        [0.25, 0.35],
+        [0.45, 0.55],
+        [0.65, 0.75],
+        [0.85, 0.95]
+    ];
+
+    const onUpdateScrollTrigger = (self) => {
+        const progress = self.progress;
+        photoBlocks.forEach((block, index) => {
+            const [showAt, hideAt] = timings[index];
+            if (progress >= showAt && progress <= hideAt) {
+                gsap.to(block, { scale: 1, duration: 0.1, overwrite: true });
+            } else {
+                gsap.to(block, { scale: 0, duration: 0.1, overwrite: true });
+            }
+        });
+    }
+
 
     if (!shouldPin) {
         $('.about__container h2').css({
@@ -515,72 +539,47 @@ APP.splitChars = () => {
         })
     }
 
-
-
-
     let split = new SplitText(".about__container h2", { type: "words,chars" });
     let textAnimation = null;
     let photoBlocks = document.querySelectorAll(".about__container .absolute--block");
 
     gsap.set(split.words, { whiteSpace: "nowrap" });
     gsap.set(photoBlocks, { scale: 0 });
-
+    
+    
     const createAnimation = () => {
         if (textAnimation) {
             textAnimation.scrollTrigger?.kill();
             textAnimation.kill();
         }
-
-
-
-
-
-        const scrollTriggerConfig = {
-            trigger: ".about",
-            scrub: true,
-            onUpdate: (self) => {
-                const progress = self.progress;
-                const timings = [
-                    [0.05, 0.15],
-                    [0.25, 0.35],
-                    [0.45, 0.55],
-                    [0.65, 0.75],
-                    [0.85, 0.95]
-                ];
-                photoBlocks.forEach((block, index) => {
-                    const [showAt, hideAt] = timings[index];
-                    if (progress >= showAt && progress <= hideAt) {
-                        gsap.to(block, { scale: 1, duration: 0.1, overwrite: true });
-                    } else {
-                        gsap.to(block, { scale: 0, duration: 0.1, overwrite: true });
-                    }
-                });
+        textAnimation = gsap.fromTo(split.chars,
+            { opacity: 0.08 },
+            {
+                force3D: true,
+                opacity: 1,
+                stagger: 0.012,
+                duration: 0.0001,
+                ease: "power2.out",
+                immediateRender: true,
+                scrollTrigger: {
+                    trigger: ".about",
+                    scrub: true,
+                    start: `top ${finalOffset}px`,
+                    end: `+=${split.chars.length * speedMultiplier}`,
+                    pin: true,
+                    pinSpacing: true,
+                    onUpdate: onUpdateScrollTrigger,
+                },
             }
-        };
-
-
-        const centerOffset = (window.innerHeight - aboutContainerHeight) / 2;
-        const finalOffset = Math.max(centerOffset, minOffset);
-        scrollTriggerConfig.start = `top ${finalOffset}px`;
-        scrollTriggerConfig.end = `+=${split.chars.length * speedMultiplier}`;
-        scrollTriggerConfig.pin = true;
-        scrollTriggerConfig.pinSpacing = true;
-
-        textAnimation = gsap.from(split.chars, {
-            scrollTrigger: scrollTriggerConfig,
-            opacity: 0.08,
-            stagger: 0.02,
-            duration: 0,
-            ease: "none"
-        });
+        );
     };
 
     createAnimation();
 
-    // ЗАМІНЕНО: використовуємо onWidthChange замість debounce + resize
     const cleanupResize = onWidthChange(() => {
         split.split({ type: "words,chars" });
         gsap.set(split.words, { whiteSpace: "nowrap" });
+        sap.set(split.chars, { opacity: 0.08 });
         createAnimation();
         ScrollTrigger.refresh();
     }, 250);
@@ -752,7 +751,7 @@ APP.formValidate = () => {
 }
 
 APP.smoothScroll = () => {
-    $('.header__container .logo__container, .footer__grid .col__logo .link-to-main-site').on('click', function(e){
+    $('.header__container .logo__container, .footer__grid .col__logo .link-to-main-site').on('click', function (e) {
         e.preventDefault();
 
         $('html, body').animate({
