@@ -752,12 +752,12 @@ APP.formValidate = () => {
 }
 
 APP.smoothScroll = () => {
-    $('.header__container .logo__containe, .footer__grid .col__logo .link-to-main-site').on('click', function(e){
+    $('.header__container .logo__container, .footer__grid .col__logo .link-to-main-site').on('click', function(e){
         e.preventDefault();
 
         $('html, body').animate({
             scrollTop: $('#hero').offset().top
-        }, 800); // 800 — час анімації в мс (можеш змінити)
+        }, 800);
     });
 }
 
