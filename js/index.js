@@ -508,7 +508,7 @@ APP.splitChars = () => {
     const aboutContainerHeight = $(".about__container").innerHeight();
     const availableSpace = window.innerHeight - minOffset;
     const shouldPin = aboutContainerHeight <= availableSpace;
-    const speedMultiplier = window.innerWidth < 768 ? 10 : 10;
+    const speedMultiplier = window.innerWidth < 768 ? 10 : 7;
     const centerOffset = (window.innerHeight - aboutContainerHeight) / 2;
     const finalOffset = Math.max(centerOffset, minOffset);
 
@@ -531,7 +531,6 @@ APP.splitChars = () => {
             }
         });
     }
-
 
     if (!shouldPin) {
         $('.about__container h2').css({
@@ -579,7 +578,7 @@ APP.splitChars = () => {
     const cleanupResize = onWidthChange(() => {
         split.split({ type: "words,chars" });
         gsap.set(split.words, { whiteSpace: "nowrap" });
-        sap.set(split.chars, { opacity: 0.08 });
+        gsap.set(split.chars, { opacity: 0.08 });
         createAnimation();
         ScrollTrigger.refresh();
     }, 250);
@@ -608,7 +607,7 @@ APP.createGSAPAnimation = () => {
                 {
                     opacity: 1,
                     scale: 1,
-                    duration: 0.2,
+                    duration: 0.6,
                     ease: 'power2.out',
                     scrollTrigger: {
                         trigger: block[0],
@@ -628,7 +627,7 @@ APP.createGSAPAnimation = () => {
             {
                 y: 0,
                 opacity: 1,
-                duration: 0.4,
+                duration: 0.8,
                 ease: 'power3.out',
                 stagger: 0.1,
                 scrollTrigger: {
@@ -651,7 +650,7 @@ APP.createGSAPAnimation = () => {
             {
                 y: 0,
                 opacity: 1,
-                duration: 0.4,
+                duration: 0.8,
                 scale: 1,
                 ease: 'power3.out',
                 stagger: 0.1,
@@ -664,6 +663,33 @@ APP.createGSAPAnimation = () => {
                 }
             }
         );
+
+        const stepsBlocks = gsap.utils.toArray('.platform__grid.steps .gsap-animated');
+        gsap.fromTo(
+            stepsBlocks,
+            {
+                y: 200,
+                opacity: 0,
+                scale: 0.4
+            },
+            {
+                y: 0,
+                opacity: 1,
+                duration: 0.8,
+                scale: 1,
+                ease: 'power3.out',
+                stagger: 0.1,
+                scrollTrigger: {
+                    trigger: '.platform__grid.steps',
+                    start: 'top center+=20%',
+                    end: 'top bottom-=25%',
+                    toggleActions: 'play none none reverse',
+                    scrub: false,
+                }
+            }
+        );
+
+
     }
 }
 
