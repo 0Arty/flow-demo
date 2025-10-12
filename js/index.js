@@ -80,6 +80,7 @@ class ModalWindow {
 
 APP.gsapRegisterPlugins = () => {
     gsap.registerPlugin(ScrollTrigger, SplitText)
+    ScrollTrigger.normalizeScroll(true);
 }
 
 APP.utils = {
@@ -544,8 +545,8 @@ APP.splitChars = () => {
 
     gsap.set(split.words, { whiteSpace: "nowrap" });
     gsap.set(photoBlocks, { scale: 0 });
-    
-    
+
+
     const createAnimation = () => {
         if (textAnimation) {
             textAnimation.scrollTrigger?.kill();
