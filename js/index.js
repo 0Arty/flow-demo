@@ -82,11 +82,11 @@ APP.gsapRegisterPlugins = () => {
     gsap.registerPlugin(ScrollTrigger, SplitText)
     // ScrollTrigger.normalizeScroll(true);
 
-    ScrollTrigger.normalizeScroll({
-        allowNestedScroll: true,
-        lockAxis: true,
-        type: "touch"
-    });
+    // ScrollTrigger.normalizeScroll({
+    //     allowNestedScroll: true,
+    //     lockAxis: true,
+    //     type: "touch"
+    // });
 
 }
 
