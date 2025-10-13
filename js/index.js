@@ -349,15 +349,15 @@ APP.customMargquee = () => {
             scrollDecelerate();
         };
 
-        marqueeContainer.addEventListener('mousedown', handleDragStart);
-        document.addEventListener('mousemove', handleDragMove);
-        document.addEventListener('mouseup', handleDragEnd);
-        marqueeContainer.addEventListener('touchstart', handleDragStart, { passive: false });
-        document.addEventListener('touchmove', handleDragMove, { passive: false });
-        document.addEventListener('touchend', handleDragEnd);
-        marqueeContainer.addEventListener('wheel', handleWheel, { passive: false });
-        marqueeContainer.style.cursor = 'grab';
-        marqueeContainer.style.userSelect = 'none';
+        // marqueeContainer.addEventListener('mousedown', handleDragStart);
+        // document.addEventListener('mousemove', handleDragMove);
+        // document.addEventListener('mouseup', handleDragEnd);
+        // marqueeContainer.addEventListener('touchstart', handleDragStart, { passive: false });
+        // document.addEventListener('touchmove', handleDragMove, { passive: false });
+        // document.addEventListener('touchend', handleDragEnd);
+        // marqueeContainer.addEventListener('wheel', handleWheel, { passive: false });
+        // marqueeContainer.style.cursor = 'grab';
+        // marqueeContainer.style.userSelect = 'none';
 
         // ЗАМІНЕНО: використовуємо onWidthChange замість resize
         const cleanupResize = onWidthChange(() => {
