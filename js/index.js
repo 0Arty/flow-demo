@@ -80,7 +80,14 @@ class ModalWindow {
 
 APP.gsapRegisterPlugins = () => {
     gsap.registerPlugin(ScrollTrigger, SplitText)
-    ScrollTrigger.normalizeScroll(true);
+    // ScrollTrigger.normalizeScroll(true);
+
+    ScrollTrigger.normalizeScroll({
+        allowNestedScroll: true,
+        lockAxis: true,
+        type: "touch"
+    });
+
 }
 
 APP.utils = {
