@@ -193,184 +193,6 @@ APP.inputMasks = () => {
   });
 };
 
-APP.customMargquee = () => {
-  function initMarquee() {
-    const marqueeContainer = document.querySelector(".marquee__container");
-    const marquee = document.querySelector(".marquee");
-    if (!marquee || !marqueeContainer) return;
-    const items = marquee.querySelectorAll(".marquee__item");
-    if (items.length === 0) return;
-    let isDragging = false;
-    let startX = 0;
-    let currentX = 0;
-    let previousX = 0;
-    let velocity = 0;
-    let animationId = null;
-    let autoScrollAnimation = null;
-    let lastMoveTime = 0;
-
-    const cloneItems = () => {
-      const marqueeWidth = marquee.scrollWidth;
-      const containerWidth = marqueeContainer.offsetWidth;
-      const clones = marquee.querySelectorAll(".marquee__item--clone");
-      clones.forEach((clone) => clone.remove());
-      const cloneCount = Math.ceil(containerWidth / marqueeWidth) + 2;
-      for (let i = 0; i < cloneCount; i++) {
-        items.forEach((item) => {
-          const clone = item.cloneNode(true);
-          clone.classList.add("marquee__item--clone");
-          marquee.appendChild(clone);
-        });
-      }
-    };
-    cloneItems();
-
-    const getItemsWidth = () => {
-      let width = 0;
-      items.forEach((item) => {
-        width += item.offsetWidth;
-      });
-      const gap = parseFloat(getComputedStyle(marquee).gap) || 12;
-      width += gap * items.length;
-      return width;
-    };
-    let itemsWidth = getItemsWidth();
-
-    const normalizePosition = (x) => {
-      while (x > 0) {
-        x -= itemsWidth;
-      }
-      while (x < -itemsWidth) {
-        x += itemsWidth;
-      }
-      return x;
-    };
-
-    const startAutoScroll = () => {
-      if (autoScrollAnimation) autoScrollAnimation.kill();
-      let currentXPos = gsap.getProperty(marquee, "x");
-      currentXPos = normalizePosition(currentXPos);
-      gsap.set(marquee, { x: currentXPos });
-      autoScrollAnimation = gsap.to(marquee, {
-        x: `-=${itemsWidth}`,
-        duration: 40,
-        ease: "none",
-        repeat: -1,
-        modifiers: {
-          x: (x) => {
-            const val = parseFloat(x);
-            return `${normalizePosition(val)}px`;
-          },
-        },
-      });
-    };
-    startAutoScroll();
-
-    const handleDragStart = (e) => {
-      isDragging = true;
-      marqueeContainer.style.cursor = "grabbing";
-      if (autoScrollAnimation) {
-        autoScrollAnimation.kill();
-      }
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      startX = e.type === "mousedown" ? e.pageX : e.touches[0].pageX;
-      previousX = startX;
-      currentX = gsap.getProperty(marquee, "x");
-      velocity = 0;
-      lastMoveTime = Date.now();
-    };
-
-    const handleDragMove = (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      const x = e.type === "mousemove" ? e.pageX : e.touches[0].pageX;
-      const deltaX = x - previousX;
-      const currentTime = Date.now();
-      const deltaTime = currentTime - lastMoveTime;
-      if (deltaTime > 0) {
-        velocity = (deltaX / deltaTime) * 16;
-      }
-      currentX += deltaX;
-      currentX = normalizePosition(currentX);
-      gsap.set(marquee, { x: currentX });
-      previousX = x;
-      lastMoveTime = currentTime;
-    };
-
-    const handleDragEnd = () => {
-      if (!isDragging) return;
-      isDragging = false;
-      marqueeContainer.style.cursor = "grab";
-      const decelerate = () => {
-        velocity *= 0.92;
-        if (Math.abs(velocity) > 0.1) {
-          currentX += velocity;
-          currentX = normalizePosition(currentX);
-          gsap.set(marquee, { x: currentX });
-          animationId = requestAnimationFrame(decelerate);
-        } else {
-          startAutoScroll();
-        }
-      };
-      decelerate();
-    };
-
-    const handleWheel = (e) => {
-      e.preventDefault();
-      if (autoScrollAnimation) {
-        autoScrollAnimation.kill();
-      }
-      if (animationId) {
-        cancelAnimationFrame(animationId);
-      }
-      const scrollDelta = e.deltaY * 0.9;
-      velocity = -scrollDelta * 0.3;
-      currentX = gsap.getProperty(marquee, "x");
-      const scrollDecelerate = () => {
-        velocity *= 0.9;
-        if (Math.abs(velocity) > 0.1) {
-          currentX += velocity;
-          currentX = normalizePosition(currentX);
-          gsap.set(marquee, { x: currentX });
-          animationId = requestAnimationFrame(scrollDecelerate);
-        } else {
-          setTimeout(() => {
-            startAutoScroll();
-          }, 500);
-        }
-      };
-      scrollDecelerate();
-    };
-
-    // marqueeContainer.addEventListener('mousedown', handleDragStart);
-    // document.addEventListener('mousemove', handleDragMove);
-    // document.addEventListener('mouseup', handleDragEnd);
-    // marqueeContainer.addEventListener('touchstart', handleDragStart, { passive: false });
-    // document.addEventListener('touchmove', handleDragMove, { passive: false });
-    // document.addEventListener('touchend', handleDragEnd);
-    // marqueeContainer.addEventListener('wheel', handleWheel, { passive: false });
-    // marqueeContainer.style.cursor = 'grab';
-    // marqueeContainer.style.userSelect = 'none';
-
-    // ЗАМІНЕНО: використовуємо onWidthChange замість resize
-    const cleanupResize = onWidthChange(() => {
-      if (autoScrollAnimation) autoScrollAnimation.kill();
-      if (animationId) cancelAnimationFrame(animationId);
-      cloneItems();
-      const newItemsWidth = getItemsWidth();
-      itemsWidth = newItemsWidth;
-      startAutoScroll();
-    }, 250);
-  }
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", initMarquee);
-  } else {
-    initMarquee();
-  }
-};
-
 APP.createSlider = (sliderSelector) => {
   let slider = null;
   const createSlider = () => {
@@ -808,11 +630,66 @@ APP.serviceWorker = () => {
     });
   }
 };
-$document.ready(function () {
+
+APP.marquee = () => {
+  function initMarquee() {
+    var isMobile = $(window).width() < 768;
+    var duration = isMobile ? 10000 : 30000;
+
+    $(".marquee").marquee("destroy");
+
+    $(".marquee").marquee({
+      duration: duration,
+      gap: 12,
+      duplicated: true,
+      direction: "left",
+      startVisible: true,
+      pauseOnHover: false,
+      allowCss3: true,
+      delayBeforeStart: 0,
+    });
+  }
+
+  const videos = document.querySelectorAll(".marquee__item video");
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach((entry) => {
+        const video = entry.target;
+        if (entry.isIntersecting && entry.intersectionRatio > 0) {
+          video.play().catch(() => {});
+        } else {
+          video.pause();
+        }
+      });
+    },
+    {
+      threshold: [0, 0.01],
+    }
+  );
+
+  // Спостерігаємо за кожним відео
+  videos.forEach((video) => {
+    observer.observe(video);
+  });
+
+  $(".marquee").on("marqueeDuplicated", function () {
+    const newVideos = document.querySelectorAll(
+      ".marquee__item video:not([data-observed])"
+    );
+    newVideos.forEach((video) => {
+      video.dataset.observed = "true";
+      observer.observe(video);
+    });
+  });
+
+  $(document).ready(initMarquee);
+  $(window).resize(initMarquee);
+};
+
+$(function () {
   APP.serviceWorker();
   APP.gsapRegisterPlugins();
   APP.inputMasks();
-  APP.customMargquee();
   APP.createSlider(".garanties-swiper");
   APP.createSlider(".opportunities-slider");
   APP.createSlider(".benefit-slider");
@@ -824,4 +701,5 @@ $document.ready(function () {
   APP.createFormPopUp();
   APP.formValidate();
   APP.smoothScroll();
+  APP.marquee();
 });
