@@ -253,7 +253,7 @@ APP.customMargquee = () => {
       gsap.set(marquee, { x: currentXPos });
       autoScrollAnimation = gsap.to(marquee, {
         x: `-=${itemsWidth}`,
-        duration: 20,
+        duration: 40,
         ease: "none",
         repeat: -1,
         modifiers: {
