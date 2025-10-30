@@ -902,12 +902,28 @@ APP.gsapMarquee = () => {
       checkVisibleVideos();
     }, 300);
   };
-
-  window.addEventListener("resize", handleResize);
+  onWidthChange(handleResize);
 
   // Початковий запуск
   setTimeout(checkVisibleVideos, 100); // 🔧 Невелика затримка для стабільності
 
+  track.addEventListener(
+    "touchstart",
+    (e) => {
+      if (e.target.closest(".marquee__item")) {
+        e.preventDefault(); // Блокуємо скрол/свайп
+      }
+    },
+    { passive: false }
+  );
+
+  track.addEventListener(
+    "touchmove",
+    (e) => {
+      e.preventDefault();
+    },
+    { passive: false }
+  );
   // Cleanup
   return () => {
     gsap.ticker.remove(throttledCheck);
