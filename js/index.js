@@ -802,7 +802,7 @@ APP.serviceWorker = () => {
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => {
       navigator.serviceWorker
-        .register("/js/service-worker.js")
+        .register("/flow-demo/js/service-worker.js")
         .then((reg) => console.log("SW зареєстровано:", reg))
         .catch((err) => console.log("SW помилка:", err));
     });
