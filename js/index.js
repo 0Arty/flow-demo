@@ -80,13 +80,121 @@ class ModalWindow {
 
 APP.gsapRegisterPlugins = () => {
   gsap.registerPlugin(ScrollTrigger, SplitText);
-  // ScrollTrigger.normalizeScroll(true);
 
-  // ScrollTrigger.normalizeScroll({
-  //     allowNestedScroll: true,
-  //     lockAxis: true,
-  //     type: "touch"
-  // });
+  window.horizontalLoop = function horizontalLoop(items, config) {
+    items = gsap.utils.toArray(items);
+    config = config || {};
+
+    let tl = gsap.timeline({
+        repeat: config.repeat,
+        paused: config.paused,
+        defaults: { ease: "none" },
+        onReverseComplete: () =>
+          tl.totalTime(tl.rawTime() + tl.duration() * 100),
+      }),
+      length = items.length,
+      startX = items[0].offsetLeft,
+      times = [],
+      widths = [],
+      xPercents = [],
+      curIndex = 0,
+      pixelsPerSecond = (config.speed || 1) * 100,
+      snap =
+        config.snap === false ? (v) => v : gsap.utils.snap(config.snap || 1),
+      totalWidth,
+      curX,
+      distanceToStart,
+      distanceToLoop,
+      item,
+      i;
+
+    gsap.set(items, {
+      xPercent: (i, target, targets) => {
+        let w = (widths[i] = parseFloat(
+          gsap.getProperty(target, "width", "px")
+        ));
+        xPercents[i] = snap(
+          (parseFloat(gsap.getProperty(target, "x", "px")) / w) * 100 +
+            gsap.getProperty(target, "xPercent")
+        );
+        return xPercents[i];
+      },
+    });
+
+    gsap.set(items, { x: 0 });
+
+    totalWidth =
+      items[length - 1].offsetLeft +
+      (xPercents[length - 1] / 100) * widths[length - 1] -
+      startX +
+      items[length - 1].offsetWidth *
+        gsap.getProperty(items[length - 1], "scaleX") +
+      (parseFloat(config.paddingRight) || 0);
+
+    for (i = 0; i < length; i++) {
+      item = items[i];
+      curX = (xPercents[i] / 100) * widths[i];
+      distanceToStart = item.offsetLeft + curX - startX;
+      distanceToLoop =
+        distanceToStart + widths[i] * gsap.getProperty(item, "scaleX");
+
+      tl.to(
+        item,
+        {
+          xPercent: snap(((curX - distanceToLoop) / widths[i]) * 100),
+          duration: distanceToLoop / pixelsPerSecond,
+        },
+        0
+      )
+        .fromTo(
+          item,
+          {
+            xPercent: snap(
+              ((curX - distanceToLoop + totalWidth) / widths[i]) * 100
+            ),
+          },
+          {
+            xPercent: xPercents[i],
+            duration:
+              (curX - distanceToLoop + totalWidth - curX) / pixelsPerSecond,
+            immediateRender: false,
+          },
+          distanceToLoop / pixelsPerSecond
+        )
+        .add("label" + i, distanceToStart / pixelsPerSecond);
+
+      times[i] = distanceToStart / pixelsPerSecond;
+    }
+
+    function toIndex(index, vars) {
+      vars = vars || {};
+      Math.abs(index - curIndex) > length / 2 &&
+        (index += index > curIndex ? -length : length);
+      let newIndex = gsap.utils.wrap(0, length, index),
+        time = times[newIndex];
+      if (time > tl.time() !== index > curIndex) {
+        vars.modifiers = { time: gsap.utils.wrap(0, tl.duration()) };
+        time += tl.duration() * (index > curIndex ? 1 : -1);
+      }
+      curIndex = newIndex;
+      vars.overwrite = true;
+      return tl.tweenTo(time, vars);
+    }
+
+    tl.next = (vars) => toIndex(curIndex + 1, vars);
+    tl.previous = (vars) => toIndex(curIndex - 1, vars);
+    tl.current = () => curIndex;
+    tl.toIndex = (index, vars) => toIndex(index, vars);
+    tl.times = times;
+    tl.progress(1, true).progress(0, true);
+
+    if (config.reversed) {
+      tl.vars.onReverseComplete();
+      tl.reverse();
+    }
+
+    return tl;
+  };
 };
 
 APP.utils = {
@@ -631,78 +739,187 @@ APP.serviceWorker = () => {
   }
 };
 
-APP.marquee = () => {
-  function initMarquee() {
-    var isMobile = $(window).width() < 768;
-    var duration = isMobile ? 10000 : 30000;
-    $(".marquee").marquee("destroy");
-    $(".marquee").marquee({
-      duration: duration,
-      gap: 12,
-      duplicated: true,
-      direction: "left",
-      startVisible: true,
-      pauseOnHover: false,
-      allowCss3: true,
-      delayBeforeStart: 0,
-    });
-  }
+APP.gsapMarquee = () => {
+  const track = document.querySelector(".marquee-track");
+  const items = gsap.utils.toArray(".marquee__item");
+  if (!items.length) return;
 
-  // ДИНАМІЧНЕ обмеження кількості граючих відео
+  // Налаштування
+  const spacing = 12;
+  const speed = 1;
+
+  // 🔧 ВИПРАВЛЕННЯ: Форсуємо GPU acceleration для всіх елементів
+  gsap.set(items, {
+    force3D: true,
+    z: 0.01, // Мікро-зсув по Z для стабільності
+    backfaceVisibility: "hidden",
+    perspective: 1000,
+    willChange: "transform", // Підказка браузеру
+  });
+
+  // --- horizontalLoop ---
+  const loop = horizontalLoop(items, {
+    repeat: -1,
+    speed: speed,
+    paddingRight: spacing,
+    paused: false,
+    reversed: false,
+  });
+
+  // 🔧 ВИПРАВЛЕННЯ: Додаємо force3D в конфіг
+  gsap.defaults({ force3D: true });
+
+  // --- Відео контроль ---
   const getMaxPlaying = () => (window.innerWidth < 768 ? 2 : 5);
-  let playingCount = 0;
+  const playingVideos = new Set();
+
+  const playVideo = (video) => {
+    if (!video) return;
+    if (playingVideos.has(video)) return;
+    if (playingVideos.size >= getMaxPlaying()) return;
+
+    if (!video.src && video.dataset.src) {
+      video.src = video.dataset.src;
+    }
+
+    // 🔧 ВИПРАВЛЕННЯ: Чекаємо на metadata перед play
+    video.addEventListener(
+      "loadedmetadata",
+      () => {
+        video
+          .play()
+          .then(() => {
+            playingVideos.add(video);
+          })
+          .catch(() => {});
+      },
+      { once: true }
+    );
+
+    if (video.readyState >= 2) {
+      video
+        .play()
+        .then(() => {
+          playingVideos.add(video);
+        })
+        .catch(() => {});
+    }
+  };
+
+  const pauseVideo = (video) => {
+    if (!video) return;
+    if (!video.paused) {
+      video.pause();
+      playingVideos.delete(video);
+    }
+  };
+
+  const checkVisibleVideos = () => {
+    const containerRect = track.parentElement.getBoundingClientRect();
+    const visibleVideos = [];
+
+    items.forEach((item) => {
+      const rect = item.getBoundingClientRect();
+      const isVisible =
+        rect.right > containerRect.left && rect.left < containerRect.right;
+      const video = item.querySelector("video");
+
+      if (video) {
+        if (isVisible) {
+          visibleVideos.push(video);
+        } else {
+          pauseVideo(video);
+        }
+      }
+    });
+
+    visibleVideos.forEach((video) => {
+      playVideo(video);
+    });
+  };
+
+  // 🔧 ВИПРАВЛЕННЯ: Throttle для ticker на мобільних
+  let lastCheck = 0;
+  const throttledCheck = () => {
+    const now = Date.now();
+    if (now - lastCheck > 100) {
+      // Перевірка кожні 100мс
+      checkVisibleVideos();
+      lastCheck = now;
+    }
+  };
+
+  gsap.ticker.add(throttledCheck);
 
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
-        const video = entry.target;
-        const isVisible = entry.isIntersecting && entry.intersectionRatio > 0.5;
+        const video = entry.target.querySelector("video");
+        if (!video) return;
 
-        if (isVisible && playingCount < getMaxPlaying()) {
-          video.play().catch(() => {});
-          playingCount++;
-          video.dataset.playing = "true";
+        if (entry.isIntersecting && entry.intersectionRatio > 0) {
+          playVideo(video);
         } else {
-          if (video.dataset.playing === "true") {
-            video.pause();
-            playingCount = Math.max(0, playingCount - 1);
-            delete video.dataset.playing;
-          }
+          pauseVideo(video);
         }
       });
     },
-    { threshold: [0, 0.01] }
+    {
+      threshold: [0, 0.1],
+      root: track.parentElement,
+      rootMargin: "50px", // 🔧 Додаємо запас для плавності
+    }
   );
 
-  // Спостереження за відео
-  const observeVideos = () => {
-    const videos = document.querySelectorAll(".marquee__item video");
-    videos.forEach((video) => {
-      if (!video.dataset.observed) {
-        video.dataset.observed = "true";
-        video.pause(); // важливо!
-        observer.observe(video);
-      }
-    });
+  items.forEach((item) => observer.observe(item));
+
+  // --- Ресайз ---
+  let resizeTimer;
+  let currentLoop = loop;
+
+  const handleResize = () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      currentLoop.kill();
+
+      // 🔧 Перед перезапуском скидаємо трансформації
+      gsap.set(items, { clearProps: "x,xPercent" });
+      gsap.set(items, {
+        force3D: true,
+        z: 0.01,
+        backfaceVisibility: "hidden",
+        perspective: 1000,
+      });
+
+      currentLoop = horizontalLoop(items, {
+        repeat: -1,
+        speed: speed,
+        paddingRight: spacing,
+        paused: false,
+        reversed: false,
+      });
+
+      checkVisibleVideos();
+    }, 300);
   };
 
-  // При дублікаті marquee — нові відео
-  $(".marquee").on("marqueeDuplicated", observeVideos);
+  window.addEventListener("resize", handleResize);
 
-  // Ініціалізація
-  $(document).ready(() => {
-    initMarquee();
-    observeVideos();
-  });
+  // Початковий запуск
+  setTimeout(checkVisibleVideos, 100); // 🔧 Невелика затримка для стабільності
 
-  $(window).resize(() => {
-    initMarquee();
-    // При зміні розміру — перерахунок, але НЕ перезапуск observer
-    // playingCount автоматично адаптується
-  });
+  // Cleanup
+  return () => {
+    gsap.ticker.remove(throttledCheck);
+    currentLoop.kill();
+    observer.disconnect();
+    window.removeEventListener("resize", handleResize);
+    clearTimeout(resizeTimer);
+    playingVideos.clear();
+  };
 };
 
-$(function () {
+$(document).ready(() => {
   APP.serviceWorker();
   APP.gsapRegisterPlugins();
   APP.inputMasks();
@@ -717,5 +934,5 @@ $(function () {
   APP.createFormPopUp();
   APP.formValidate();
   APP.smoothScroll();
-  APP.marquee();
+  APP.gsapMarquee();
 });
