@@ -635,9 +635,7 @@ APP.marquee = () => {
   function initMarquee() {
     var isMobile = $(window).width() < 768;
     var duration = isMobile ? 10000 : 30000;
-
     $(".marquee").marquee("destroy");
-
     $(".marquee").marquee({
       duration: duration,
       gap: 12,
@@ -650,40 +648,58 @@ APP.marquee = () => {
     });
   }
 
-  const videos = document.querySelectorAll(".marquee__item video");
+  // ДИНАМІЧНЕ обмеження кількості граючих відео
+  const getMaxPlaying = () => (window.innerWidth < 768 ? 2 : 5);
+  let playingCount = 0;
+
   const observer = new IntersectionObserver(
     (entries) => {
       entries.forEach((entry) => {
         const video = entry.target;
-        if (entry.isIntersecting && entry.intersectionRatio > 0) {
+        const isVisible = entry.isIntersecting && entry.intersectionRatio > 0.5;
+
+        if (isVisible && playingCount < getMaxPlaying()) {
           video.play().catch(() => {});
+          playingCount++;
+          video.dataset.playing = "true";
         } else {
-          video.pause();
+          if (video.dataset.playing === "true") {
+            video.pause();
+            playingCount = Math.max(0, playingCount - 1);
+            delete video.dataset.playing;
+          }
         }
       });
     },
-    {
-      threshold: [0, 0.01],
-    }
+    { threshold: [0, 0.01] }
   );
 
-  // Спостерігаємо за кожним відео
-  videos.forEach((video) => {
-    observer.observe(video);
-  });
-
-  $(".marquee").on("marqueeDuplicated", function () {
-    const newVideos = document.querySelectorAll(
-      ".marquee__item video:not([data-observed])"
-    );
-    newVideos.forEach((video) => {
-      video.dataset.observed = "true";
-      observer.observe(video);
+  // Спостереження за відео
+  const observeVideos = () => {
+    const videos = document.querySelectorAll(".marquee__item video");
+    videos.forEach((video) => {
+      if (!video.dataset.observed) {
+        video.dataset.observed = "true";
+        video.pause(); // важливо!
+        observer.observe(video);
+      }
     });
+  };
+
+  // При дублікаті marquee — нові відео
+  $(".marquee").on("marqueeDuplicated", observeVideos);
+
+  // Ініціалізація
+  $(document).ready(() => {
+    initMarquee();
+    observeVideos();
   });
 
-  $(document).ready(initMarquee);
-  $(window).resize(initMarquee);
+  $(window).resize(() => {
+    initMarquee();
+    // При зміні розміру — перерахунок, але НЕ перезапуск observer
+    // playingCount автоматично адаптується
+  });
 };
 
 $(function () {
